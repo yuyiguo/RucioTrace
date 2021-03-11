@@ -21,10 +21,10 @@ RUN go get github.com/lestrrat-go/file-rotatelogs
 RUN go get github.com/vkuznet/lb-stomp
 RUN go get github.com/go-stomp/stomp
 # build Rucio tracer
-WORKDIR $WDIR/etc
-RUN curl -ksLO https://raw.githubusercontent.com/yuyiguo/CMSRucio/RucioTraces/etc/ruciositemap.json
+WORKDIR $WDIR/etc 
+RUN curl -ksLO https://raw.githubusercontent.com/yuyiguo/RucioTraces/master/etc/ruciositemap.json
 WORKDIR $WDIR/stompserver
-RUN curl -ksLO https://raw.githubusercontent.com/yuyiguo/CMSRucio/RucioTraces/stompserver/stompserver.go
+RUN curl -ksLO https://raw.githubusercontent.com/yuyiguo/RucioTracers/master/stompserver/stompserver.go
 RUN go mod init github.com/yuyiguo/CMSRucio/RucioTraces/stompserver && go mod tidy && \
     go build -o /build/RucioTracer -ldflags="-s -w -extldflags -static" /data/stompserver/stompserver.go
 FROM alpine
