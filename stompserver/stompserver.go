@@ -31,9 +31,10 @@ import (
 
 // Configuration stores server configuration parameters
 type Configuration struct {
-	// HTTP server configuration options
-	Interval int `json:"interval"` // interval of server
-	Verbose  int `json:"verbose"`  // verbose level
+	// server configuration options
+	Interval int    `json:"interval"` // interval of server
+	Verbose  int    `json:"verbose"`  // verbose level
+	LogFile  string `json:"logFile"`  // log file
 	// Stomp configuration options
 	StompURI         string `json:"stompURI"`         // StompAMQ URI for consumer and Producer
 	StompLogin       string `json:"stompLogin"`       // StompAQM login name
@@ -150,6 +151,30 @@ func initStomp() {
 	log.Println(stompMgr.String())
 }
 
+// Define FWJR Record
+type MetaData struct {
+	Ts      int64  `json:"ts"`
+	JobType string `json:"jobtype"`
+	WnName  string `json:"wn_name"`
+}
+
+type InputLst struct {
+	Lfn    int    `json:"lfn"`
+	Events int64  `json:"events"`
+	GUID   string `json:"guid"`
+}
+type Step struct {
+	Input []InputLst `json:"input"`
+	Site  string     `json:"site"`
+}
+type FWJRRecord struct {
+	LFNArray      []string
+	LFNArrayRef   []string
+	FallbackFiles []int    `json:"fallbackFiles"`
+	Metadata      MetaData `json:"meta_data"`
+	Steps         []Step   `json:"steps"`
+}
+
 // FWJRconsumer Consumes for FWJR/WMArchive topic
 func FWJRconsumer(msg *stomp.Message) ([]Lfnsite, int64, string, string, error) {
 	//first to check to make sure there is something in msg,
@@ -168,29 +193,6 @@ func FWJRconsumer(msg *stomp.Message) ([]Lfnsite, int64, string, string, error) 
 		log.Println("*****************Source AMQ message of wmarchive*********************")
 		log.Println("Source AMQ message of wmarchive: ", string(msg.Body))
 		log.Println("*******************End AMQ message of wmarchive**********************")
-	}
-	// Define FWJR Recod
-	type MetaData struct {
-		Ts      int64  `json:"ts"`
-		JobType string `json:"jobtype"`
-		WnName  string `json:"wn_name"`
-	}
-
-	type InputLst struct {
-		Lfn    int    `json:"lfn"`
-		Events int64  `json:"events"`
-		GUID   string `json:"guid"`
-	}
-	type Step struct {
-		Input []InputLst `json:"input"`
-		Site  string     `json:"site"`
-	}
-	type FWJRRecord struct {
-		LFNArray      []string
-		LFNArrayRef   []string
-		FallbackFiles []int    `json:"fallbackFiles"`
-		Metadata      MetaData `json:"meta_data"`
-		Steps         []Step   `json:"steps"`
 	}
 	var rec FWJRRecord
 	err := json.Unmarshal(msg.Body, &rec)
@@ -323,21 +325,18 @@ func server() {
 	var err error
 	var addr string
 	var conn *stomp.Conn
+	var sub *stomp.Subscription
 
 	// get connection
 	conn, addr, err = stompMgr.GetConnection()
 	if err != nil {
-		//try again
-		conn, addr, err = stompMgr.GetConnection()
+		log.Fatal(err)
 	}
 	// always close connection
 	//defer conn.Disconnect()
 
 	// subscribe to ActiveMQ topic
-	sub, err2 := conn.Subscribe(Config.EndpointConsumer, stomp.AckAuto)
-	if err2 != nil {
-		sub, err = conn.Subscribe(Config.EndpointConsumer, stomp.AckAuto)
-	}
+	sub, err = conn.Subscribe(Config.EndpointConsumer, stomp.AckAuto)
 	if err != nil {
 		log.Fatal(err)
 	} else {
@@ -347,18 +346,18 @@ func server() {
 	var tc uint64
 	t1 := time.Now().Unix()
 	var t2 int64
-	var ok bool
 	var msg *stomp.Message
 	for {
 		// get stomp messages from subscriber channel
 		select {
-		case msg, ok = <-sub.C:
-			if !ok {
+		case msg = <-sub.C:
+			if msg.Err != nil {
+				log.Println("receive error message", err)
 				conn, addr, err = stompMgr.GetConnection()
-				sub, _ = conn.Subscribe(Config.EndpointConsumer, stomp.AckAuto)
-				msg, ok = <-sub.C
-			}
-			if !ok { //still not get the message, skip this case
+				sub, err = conn.Subscribe(Config.EndpointConsumer, stomp.AckAuto)
+				if err != nil {
+					log.Println("unable to subscribe", err)
+				}
 				break
 			}
 			// process stomp messages
@@ -417,17 +416,6 @@ func main() {
 	// usage: ./stompserver -config stompserverconfig.json -sitemap ruciositemap.json
 
 	atomic.StoreUint64(&msgreceived, 0)
-	//set up roration logs
-	logName := "RucioTrace" + "-%Y%m%d"
-	hostname, err := os.Hostname()
-	if err == nil {
-		logName = "RucioTrace" + "-" + hostname + "-%Y%m%d"
-	}
-	rlog, err := rotatelogs.New(logName)
-	if err == nil {
-		log.SetOutput(rlog)
-	}
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	var config string
 	var fsitemap string
 	flag.StringVar(&config, "config", "", "config file name")
@@ -445,6 +433,20 @@ func main() {
 		log.Printf("%v", Config)
 		log.Printf("%v", sitemap)
 	}
+
+	//set up rotation logs
+	if Config.LogFile != "" {
+		logName := fmt.Sprintf("%s-%Y%m%d", Config.LogFile)
+		hostname, err := os.Hostname()
+		if err == nil {
+			logName = fmt.Sprintf("%s-%s-%Y%m%d", Config.LogFile, hostname)
+		}
+		rlog, err := rotatelogs.New(logName)
+		if err == nil {
+			log.SetOutput(rlog)
+		}
+	}
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	initStomp()
 	server()
 }
