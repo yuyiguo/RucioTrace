@@ -346,11 +346,10 @@ func server() {
 	var tc uint64
 	t1 := time.Now().Unix()
 	var t2 int64
-	var msg *stomp.Message
 	for {
 		// get stomp messages from subscriber channel
 		select {
-		case msg = <-sub.C:
+		case msg := <-sub.C:
 			if msg.Err != nil {
 				log.Println("receive error message", err)
 				conn, addr, err = stompMgr.GetConnection()
