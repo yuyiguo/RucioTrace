@@ -97,9 +97,6 @@ type rotateLogger struct {
 	RotateLogs *rotatelogs.RotateLogs
 }
 
-//for debugging, counting the how many message received when 1k is processed
-var msgreceived uint64
-
 //helper function to parse sitemap
 func parseSitemap(mapFile string) error {
 	data, err := ioutil.ReadFile(mapFile)
