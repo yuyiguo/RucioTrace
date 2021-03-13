@@ -82,9 +82,9 @@ type Lfnsite struct {
 }
 
 type Metrics struct {
-	Received uint64
-	Send     uint64
-	Traces   uint64
+	Received uint64 `json:"received"`
+	Send     uint64 `json:"send"`
+	Traces   uint64 `json:"traces"`
 }
 
 var metrics Metrics
