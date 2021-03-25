@@ -13,9 +13,9 @@ data:
     echo $PWD
     ls
     ls /etc/secrets
-    ls -l /data/rucio-tracer
-    /data/rucio-tracer -help
-    /data/rucio-tracer -config /etc/secrets/stompserverconfig.json -sitemap /etc/secrets/ruciositemap.json
+    ls -l /data/RucioTracer
+    /data/RucioTracer -help
+    /data/RucioTracer -config /etc/secrets/stompserverconfig.json -sitemap /etc/secrets/ruciositemap.json
 ---
 kind: Deployment
 apiVersion: apps/v1
