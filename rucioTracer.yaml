@@ -2,9 +2,9 @@
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: RucioTracer
+  name: rucio-tracer
   labels:
-    app: RucioTracer
+    app: rucio-tracer
   namespace: rucio
 data:
   run.sh: |
@@ -13,31 +13,31 @@ data:
     echo $PWD
     ls
     ls /etc/secrets
-    ls -l /data/RucioTracer
-    /data/RucioTracer -help
-    /data/ -config /etc/secrets/stompserverconfig.json -sitemap /etc/secrets/ruciositemap.json
+    ls -l /data/rucio-tracer
+    /data/rucio-tracer -help
+    /data/rucio-tracer -config /etc/secrets/stompserverconfig.json -sitemap /etc/secrets/ruciositemap.json
 ---
 kind: Deployment
 apiVersion: apps/v1
 metadata:
   labels:
-    app: RucioTracer
-  name: RucioTracer
+    app: rucio-tracer
+  name: rucio-tracer
   namespace: rucio
 spec:
   selector:
     matchLabels:
-      app: RucioTracer
+      app: rucio-tracer
   replicas: 1 #PROD# 3
   template:
     metadata:
       labels:
-        app: RucioTracer
+        app: rucio-tracer
         env: k8s #k8s#
     spec:
       containers:
       - image: yuyiguo/rucio-tracers:0.1 #imagetag
-        name: RucioTracer
+        name: rucio-tracer
         imagePullPolicy: Always
         resources:
           requests:
@@ -68,7 +68,7 @@ spec:
           secretName: rucio-tracer-secrets
       - name: setup-and-run
         configMap:
-          name: RucioTracer
+          name: rucio-tracer
 #PROD#- name: logs-cephfs
 #PROD#  persistentVolumeClaim:
 #PROD#      claimName: logs-cephfs-claim-rucio
